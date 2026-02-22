@@ -2,6 +2,11 @@
   "name": "pi-plan-mode",
   "version": "0.1.2",
   "description": "Plan mode extension for pi - read-only exploration with plan file editing",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qmx/pi-plan-mode"
+  },
+  "description": "Plan mode extension for pi - read-only exploration with plan file editing",
   "type": "module",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
