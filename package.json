@@ -1,6 +1,6 @@
 {
   "name": "pi-plan-mode",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Plan mode extension for pi - read-only exploration with plan file editing",
   "type": "module",
   "main": "dist/index.js",
