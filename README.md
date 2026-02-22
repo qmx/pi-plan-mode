@@ -26,7 +26,7 @@ This extension was inspired by [@juanibiapina/pi-plan](https://github.com/juanib
 ## Installation
 
 ```bash
-npm install @qmx/pi-plan-mode
+npm install pi-plan-mode
 ```
 
 Or use pi's built-in package manager to install from npm or git.
