@@ -1,0 +1,38 @@
+{
+  "name": "@qmx/pi-plan-mode",
+  "version": "0.1.0",
+  "description": "Plan mode extension for pi - read-only exploration with plan file editing",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "README.md"
+  ],
+  "keywords": [
+    "pi",
+    "pi-package",
+    "extension",
+    "plan-mode"
+  ],
+  "pi": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "^0.51.1",
+    "@types/node": "^22.10.7",
+    "typescript": "^5.7.3"
+  },
+  "license": "MIT"
+}

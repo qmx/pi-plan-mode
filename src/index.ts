@@ -92,7 +92,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 			pi.setActiveTools(PLAN_MODE_TOOLS);
 
 			// Create plan file
-			const sessionFile = ctx.sessionManager.getSessionFile();
+			const sessionFile = ctx.sessionManager.getSessionFile() ?? null;
 			const sessionFolder = getSessionFolder(sessionFile);
 			const plansDir = path.join(getPlansDir(), sessionFolder);
 			const planFileName = generatePlanName();
@@ -113,7 +113,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 		} else {
 			pi.setActiveTools(NORMAL_MODE_TOOLS);
 			currentPlanPath = null;
-			ctx.ui.notify("Plan mode disabled. Full tool access restored.", "success");
+			ctx.ui.notify("Plan mode disabled. Full tool access restored.", "info");
 		}
 		updateStatus(ctx);
 		persistState();
