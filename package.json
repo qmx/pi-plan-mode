@@ -1,5 +1,5 @@
 {
-  "name": "@qmx/pi-plan-mode",
+  "name": "pi-plan-mode",
   "version": "0.1.0",
   "description": "Plan mode extension for pi - read-only exploration with plan file editing",
   "type": "module",
