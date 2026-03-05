@@ -1,27 +1,50 @@
 # pi-plan-mode
 
-Plan mode extension for [pi](https://github.com/badlogic/pi) - a read-only exploration mode for safe code analysis and planning.
+Plan mode extension for [pi](https://github.com/badlogic/pi): a safer exploration/planning mode before execution.
 
 ## Inspiration
 
-This extension was inspired by [@juanibiapina/pi-plan](https://github.com/juanibiapina/pi-plan).
+Inspired by [@juanibiapina/pi-plan](https://github.com/juanibiapina/pi-plan).
 
 ## Features
 
-- **Plan mode toggle**: Use `/plan` command or `Ctrl+Alt+P` to toggle plan mode
-- **Read-only exploration**: In plan mode, only read tools are available: `read`, `bash`, `grep`, `find`, `ls`, `questionnaire`
-- **Plan file editing**: `edit` and `write` tools work for the plan file only
-- **Auto-created plan file**: Plans are automatically saved to `~/.pi/agent/plans/<session>/<name>.md`
-- **User-controlled exit**: Only the user can exit plan mode (LLM cannot exit)
-- **Session persistence**: Plan mode state survives session restarts
+- **Plan mode toggle**: `/plan` (or `Ctrl+Alt+P` after integration)
+- **Plan approval**: `/plan:approve` exits plan mode and starts execution with the approved plan
+- **Plan cancellation**: `/plan:cancel` exits plan mode without approving
+- **Plan resumption**: `/plan:resume <plan>` resumes planning from an existing plan file
+- **Restricted tools in plan mode**: `read`, `bash`, `grep`, `find`, `ls`, `edit`, `write`
+- **Write protection**: `edit`/`write` allowed for plan file and `/tmp` only
+- **AI-assisted bash safety**: LLM evaluates whether commands are exploratory or mutating
+- **Plan summary widget**: Shows 2-line summary in the UI during planning
+- **Plan file creation**: plans are created under `~/.pi/agent/sessions/plans/`
+- **Terraform-style filename strategy**: `<adjective>-<animal>-<rand>.md` (for example `fuzzy-otter-a7k2.md`)
+- **Session persistence**: mode + active plan path survive session resume
+- **Bash override memory**: approved commands are remembered within a session
 
-## Usage
+## Quick Start
 
-1. Enter plan mode: `/plan` or press `Ctrl+Alt+P`
-2. Explore the codebase using read-only tools
-3. Edit the plan file using `edit`/`write` tools (only allowed for the plan file)
-4. Exit plan mode: `/plan` again
-5. Execute your plan with full tools available
+1. Enter plan mode: `/plan` (or `Ctrl+Alt+P`)
+2. Explore with safe tools and write your plan
+3. Approve and execute: `/plan:approve`
+
+If you want to leave without approving, run `/plan` again.
+
+## Command Reference
+
+| Command | What it does |
+|---|---|
+| `/plan` | Enter plan mode (create new plan) or exit plan mode |
+| `/plan:approve` | Approve plan, exit plan mode, and start execution |
+| `/plan:cancel` | Exit plan mode without approving |
+| `/plan:resume <plan>` | Resume planning from an existing plan file |
+
+## Safety & Restrictions
+
+In plan mode:
+- Bash commands are evaluated by an AI model (exploratory vs. mutating)
+- `edit` and `write` are only allowed for the current plan file and `/tmp/`
+- Destructive bash commands require user confirmation
+- Confirmed commands are remembered for the duration of the session
 
 ## Installation
 
@@ -29,7 +52,13 @@ This extension was inspired by [@juanibiapina/pi-plan](https://github.com/juanib
 npm install pi-plan-mode
 ```
 
-Or use pi's built-in package manager to install from npm or git.
+Then enable it in pi via your packages/extensions configuration.
+
+## Development
+
+- Build: `npm run build`
+- Clean: `npm run clean`
+- Releases: see `docs/releases.md`
 
 ## License
 
