@@ -219,11 +219,20 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	}
 
 	function persistState(ctx: ExtensionContext): void {
-		pi.appendEntry("plan-mode", {
-			planPath: currentPlanPath,
-			active: planModeEnabled,
-			createdAt: new Date().toISOString(),
-		});
+		if (planModeEnabled && currentPlanPath) {
+			pi.appendEntry("plan-mode", {
+				planPath: currentPlanPath,
+				active: true,
+				createdAt: new Date().toISOString(),
+			});
+		} else {
+			// Clear state but keep the plan file for reference
+			pi.appendEntry("plan-mode", {
+				planPath: null,
+				active: false,
+				concludedAt: new Date().toISOString(),
+			});
+		}
 	}
 
 	function enterPlanMode(planPath: string, ctx: ExtensionContext): void {
@@ -408,16 +417,15 @@ When the plan is complete, remind the user to use /plan:approve to start executi
 		const entries = ctx.sessionManager.getEntries();
 		const planEntry = getPlanEntry(entries);
 
-		if (planEntry?.data?.planPath) {
+		// Only re-enter plan mode if it's still active (not approved or cancelled)
+		if (planEntry?.data?.active === true && planEntry?.data?.planPath) {
 			const planPath = planEntry.data.planPath;
 			if (fs.existsSync(planPath)) {
-				planModeEnabled = planEntry.data.active ?? false;
+				planModeEnabled = true;
 				currentPlanPath = planPath;
 
-				if (planModeEnabled) {
-					updateStatus(ctx);
-					await updateWidget(ctx);
-				}
+				updateStatus(ctx);
+				await updateWidget(ctx);
 			}
 		}
 	});
