@@ -30,10 +30,8 @@
     "dev": "tsc -p tsconfig.build.json --watch",
     "prepublishOnly": "npm run clean && npm run build"
   },
-  "dependencies": {
-    "@mariozechner/pi-ai": "^0.51.6"
-  },
   "peerDependencies": {
+    "@mariozechner/pi-ai": "*",
     "@mariozechner/pi-coding-agent": "*"
   },
   "devDependencies": {
