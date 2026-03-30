@@ -175,11 +175,11 @@ The user will run /plan when they're ready for you to start making changes.`;
 					};
 				}
 
-				const apiKey = await ctx.modelRegistry.getApiKey(currentModel);
-				if (!apiKey) {
+				const authResult = await ctx.modelRegistry.getApiKeyAndHeaders(currentModel);
+				if (!authResult.ok) {
 					return {
 						block: true,
-						reason: "Plan mode: cannot review command (no API key).",
+						reason: "Plan mode: cannot review command (auth failed).",
 					};
 				}
 
@@ -201,7 +201,7 @@ The user will run /plan when they're ready for you to start making changes.`;
 							},
 						],
 					},
-					{ apiKey, maxTokens: 256 },
+					{ apiKey: authResult.apiKey, headers: authResult.headers, maxTokens: 256 },
 				);
 
 				const text = response.content
