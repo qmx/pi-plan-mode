@@ -8,32 +8,32 @@
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { completeSimple } from "@mariozechner/pi-ai";
 
-const SAFE_COMMAND_PATTERNS: RegExp[] = [
-	/^\s*cat\s/,
-	/^\s*ls\s/,
-	/^\s*grep\s/,
-	/^\s*find\s/,
-	/^\s*head\s/,
-	/^\s*tail\s/,
-	/^\s*wc\s/,
-	/^\s*pwd\s*$/,
-	/^\s*echo\s/,
-	/^\s*printf\s/,
-	/^\s*git\s+(status|log|diff|show|branch)\s/,
-	/^\s*file\s/,
-	/^\s*stat\s/,
-	/^\s*du\s/,
-	/^\s*df\s/,
-	/^\s*which\s/,
-	/^\s*type\s/,
-	/^\s*env\s*$/,
-	/^\s*printenv\s*$/,
-	/^\s*uname\s*$/,
-	/^\s*whoami\s*$/,
-	/^\s*date\s*$/,
+export const SAFE_COMMAND_PATTERNS: RegExp[] = [
+	/^\s*cat\b/,
+	/^\s*ls\b/,
+	/^\s*grep\b/,
+	/^\s*find\b/,
+	/^\s*head\b/,
+	/^\s*tail\b/,
+	/^\s*wc\b/,
+	/^\s*pwd\b/,
+	/^\s*echo\b/,
+	/^\s*printf\b/,
+	/^\s*git\s+(status|log|diff|show|branch)\b/,
+	/^\s*file\b/,
+	/^\s*stat\b/,
+	/^\s*du\b/,
+	/^\s*df\b/,
+	/^\s*which\b/,
+	/^\s*type\b/,
+	/^\s*env\b/,
+	/^\s*printenv\b/,
+	/^\s*uname\b/,
+	/^\s*whoami\b/,
+	/^\s*date\b/,
 ];
 
-const MUTATING_GIT_COMMANDS: RegExp[] = [
+export const MUTATING_GIT_COMMANDS: RegExp[] = [
 	/^\s*git\s+commit/,
 	/^\s*git\s+push/,
 	/^\s*git\s+pull/,
@@ -46,13 +46,32 @@ const MUTATING_GIT_COMMANDS: RegExp[] = [
 	/^\s*git\s+tag\s+-d/,
 ];
 
-const UNSAFE_SHELL_CHARS = /[|;&`\n]/;
-const REDIRECT_PATTERN = />{1,2}/;
+// Block dangerous shell constructs (but allow pipes for safe command chaining)
+export const UNSAFE_SHELL_CHARS = /[;&`\n]/;
+export const REDIRECT_PATTERN = />{1,2}/;
 
-function isWhitelisted(command: string): boolean {
+// Patterns for unsafe pipe targets
+const UNSAFE_PIPE_PATTERNS: RegExp[] = [
+	/\|\s*rm\b/,
+	/\|\s*xargs.*rm\b/,
+	/\|\s*sudo\b/,
+	/\|\s*chmod\b/,
+	/\|\s*chown\b/,
+	/\|\s*mv\b/,
+	/\|\s*cp\b/,
+	/\|\s*wget\b/,
+	/\|\s*curl\b/,
+];
+
+function hasUnsafePipe(command: string): boolean {
+	return UNSAFE_PIPE_PATTERNS.some((p) => p.test(command));
+}
+
+export function isWhitelisted(command: string): boolean {
 	const trimmed = command.trim().replace(/\\\n\s*/g, "").replace(/\n\s*/g, " ");
 	if (UNSAFE_SHELL_CHARS.test(trimmed)) return false;
 	if (REDIRECT_PATTERN.test(trimmed)) return false;
+	if (hasUnsafePipe(trimmed)) return false;
 	return SAFE_COMMAND_PATTERNS.some((p) => p.test(trimmed));
 }
 
@@ -142,7 +161,7 @@ Help the user plan what needs to be done:
 		if (lastEntry && "data" in lastEntry && (lastEntry as any).data?.active === true) {
 			planModeEnabled = true;
 			updateStatus(ctx);
-			ctx.ui.notify("ℹ️ Plan mode restored", "info");
+			ctx.ui.notify("i️ Plan mode restored", "info");
 		}
 	});
 
