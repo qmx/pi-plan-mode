@@ -102,19 +102,30 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 		});
 	}
 
+	function togglePlanMode(ctx: ExtensionContext): void {
+		planModeEnabled = !planModeEnabled;
+
+		if (planModeEnabled) {
+			ctx.ui.notify("✅ Plan mode enabled - writes blocked", "info");
+		} else {
+			ctx.ui.notify("✅ Plan mode disabled - writes enabled", "info");
+		}
+
+		updateStatus(ctx);
+		persistState(ctx);
+	}
+
 	pi.registerCommand("plan", {
 		description: "Toggle plan mode (blocks write/edit tools)",
 		handler: async (_args, ctx) => {
-			planModeEnabled = !planModeEnabled;
+			togglePlanMode(ctx);
+		},
+	});
 
-			if (planModeEnabled) {
-				ctx.ui.notify("✅ Plan mode enabled - writes blocked", "info");
-			} else {
-				ctx.ui.notify("✅ Plan mode disabled - writes enabled", "info");
-			}
-
-			updateStatus(ctx);
-			persistState(ctx);
+	pi.registerShortcut("ctrl+shift+p", {
+		description: "Toggle plan mode",
+		handler: async (ctx) => {
+			togglePlanMode(ctx);
 		},
 	});
 

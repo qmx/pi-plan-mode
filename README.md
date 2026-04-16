@@ -24,6 +24,18 @@ Plan mode extension for [pi](https://github.com/badlogic/pi): a toggleable read-
 |---|---|
 | `/plan` | Toggle plan mode on/off |
 
+## Keyboard Shortcut
+
+Default shortcut: `Ctrl+Shift+P`
+
+Customize in `~/.pi/agent/keybindings.json`:
+
+```json
+{
+  "plan-mode.toggle": ["ctrl+shift+p"]
+}
+```
+
 ## Safety & Restrictions
 
 In plan mode:
