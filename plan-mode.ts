@@ -7,6 +7,9 @@
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { completeSimple } from "@mariozechner/pi-ai";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 export const SAFE_COMMAND_PATTERNS: RegExp[] = [
 	/^\s*cat\b/,
@@ -89,17 +92,23 @@ const DEFAULT_PLAN_TOOLS = ["read", "bash"];
 export default function planModeExtension(pi: ExtensionAPI): void {
 	let planModeEnabled = false;
 
-	function getActiveTools(ctx: ExtensionContext): string[] {
-		// Use a safe way to access settings via the context
-		const settings = (ctx as any).settingsManager?.settings || {};
-		const whitelist = (settings["planMode.toolWhitelist"] as string[]) || [];
-		const availableTools = pi.getAllTools().map((t) => t.name);
+	function loadToolWhitelist(): string[] {
+		try {
+			const settingsPath = join(homedir(), ".pi", "agent", "settings.json");
+			const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
+			const whitelist = settings["planMode.toolWhitelist"];
+			return Array.isArray(whitelist) ? whitelist : [];
+		} catch {
+			return [];
+		}
+	}
 
-		// Filter whitelist:
-		// 1. Must exist in available tools
-		// 2. Must not be 'write' or 'edit'
+	function getActiveTools(): string[] {
+		const whitelist = loadToolWhitelist();
+
+		// Filter whitelist: must not be 'write' or 'edit'
 		const filteredWhitelist = whitelist.filter(
-			(name) => availableTools.includes(name) && name !== "write" && name !== "edit",
+			(name) => name !== "write" && name !== "edit",
 		);
 
 		return [...new Set([...DEFAULT_PLAN_TOOLS, ...filteredWhitelist])];
@@ -139,7 +148,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	pi.on("before_agent_start", async (_event, ctx) => {
 		if (planModeEnabled) {
 			// Hide write/edit tools entirely from the agent (unless whitelisted, but we block write/edit in getActiveTools)
-			pi.setActiveTools(getActiveTools(ctx));
+			pi.setActiveTools(getActiveTools());
 		} else {
 			// Restore all tools
 			const allTools = pi.getAllTools().map((t) => t.name);
@@ -148,7 +157,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 
 		if (!planModeEnabled) return;
 
-		const activeTools = getActiveTools(ctx);
+		const activeTools = getActiveTools();
 		const toolList = activeTools.map((t) => `- ${t}`).join("\n");
 
 		const instructions = `[PLAN MODE ACTIVE]
@@ -188,7 +197,7 @@ Help the user plan what needs to be done:
 	pi.on("tool_call", async (event, ctx) => {
 		if (!planModeEnabled) return;
 
-		const activeTools = getActiveTools(ctx);
+		const activeTools = getActiveTools();
 
 		// Always block write/edit tools
 		if (event.toolName === "write" || event.toolName === "edit") {

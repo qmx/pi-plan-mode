@@ -7,6 +7,12 @@
 import { describe, it, expect, vi } from "vitest";
 import { isWhitelisted } from "./plan-mode.js";
 
+vi.mock("node:fs", () => ({
+	readFileSync: vi.fn().mockReturnValue(JSON.stringify({
+		"planMode.toolWhitelist": ["vibe_check", "write", "mcp"]
+	})),
+}));
+
 describe("plan-mode whitelist", () => {
 	describe("commands without trailing space", () => {
 		it("should whitelist ls alone", () => {
@@ -124,11 +130,6 @@ describe("plan-mode whitelist", () => {
 			sessionManager: {
 				getEntries: vi.fn().mockReturnValue([]),
 			},
-			settingsManager: {
-				settings: {
-					"planMode.toolWhitelist": ["vibe_check", "write"]
-				}
-			}
 		};
 
 		it("should filter whitelist tools correctly (excluding write/edit)", async () => {
@@ -141,7 +142,7 @@ describe("plan-mode whitelist", () => {
 			await beforeAgentStartHandler({ systemPrompt: "test" }, mockCtx);
 
 			expect(mockPi.setActiveTools).toHaveBeenCalledWith(
-				expect.arrayContaining(["read", "bash", "vibe_check"])
+				expect.arrayContaining(["read", "bash", "vibe_check", "mcp"])
 			);
 			expect(mockPi.setActiveTools).not.toHaveBeenCalledWith(
 				expect.arrayContaining(["write"])
