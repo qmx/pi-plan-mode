@@ -176,5 +176,32 @@ describe("plan-mode whitelist", () => {
 				reason: "Plan mode active. Use /plan to enable write/edit tools."
 			});
 		});
+
+		it("should block non-whitelisted tools in tool_call hook", async () => {
+			const { default: planModeExtension } = await import("./plan-mode.js");
+			const mockPiLocal: any = {
+				on: vi.fn(),
+				registerCommand: vi.fn(),
+				appendEntry: vi.fn(),
+				setActiveTools: vi.fn(),
+				getAllTools: vi.fn().mockReturnValue([
+					{ name: "read" },
+					{ name: "bash" },
+					{ name: "write" },
+					{ name: "vibe_check" },
+					{ name: "dangerous_tool" }
+				]),
+			};
+			planModeExtension(mockPiLocal);
+			const toolCallHandler = mockPiLocal.on.mock.calls.find((call: any) => call[0] === "tool_call")[1];
+			const planCommandHandler = mockPiLocal.registerCommand.mock.calls.find((call: any) => call[0] === "plan")[1].handler;
+			await planCommandHandler(null, mockCtx);
+
+			const dangerousResult = await toolCallHandler({ toolName: "dangerous_tool" }, mockCtx);
+			expect(dangerousResult).toEqual({
+				block: true,
+				reason: "Tool 'dangerous_tool' is not allowed in plan mode."
+			});
+		});
 	});
 });

@@ -189,16 +189,20 @@ Help the user plan what needs to be done:
 		if (!planModeEnabled) return;
 
 		const activeTools = getActiveTools(ctx);
-		if (activeTools.includes(event.toolName)) {
-			// If it's bash, we still want the safety checks
-			if (event.toolName !== "bash") return;
-		}
 
-		// Block write/edit tools
+		// Always block write/edit tools
 		if (event.toolName === "write" || event.toolName === "edit") {
 			return {
 				block: true,
 				reason: "Plan mode active. Use /plan to enable write/edit tools.",
+			};
+		}
+
+		// Block tools not in active tools list (which includes whitelist)
+		if (!activeTools.includes(event.toolName)) {
+			return {
+				block: true,
+				reason: `Tool '${event.toolName}' is not allowed in plan mode.`,
 			};
 		}
 
