@@ -84,8 +84,26 @@ function getBashOverride(entries: any[], command: string): boolean {
 	return false;
 }
 
+const DEFAULT_PLAN_TOOLS = ["read", "bash"];
+
 export default function planModeExtension(pi: ExtensionAPI): void {
 	let planModeEnabled = false;
+
+	function getActiveTools(ctx: ExtensionContext): string[] {
+		// Use a safe way to access settings via the context
+		const settings = (ctx as any).settingsManager?.settings || {};
+		const whitelist = (settings["planMode.toolWhitelist"] as string[]) || [];
+		const availableTools = pi.getAllTools().map((t) => t.name);
+
+		// Filter whitelist:
+		// 1. Must exist in available tools
+		// 2. Must not be 'write' or 'edit'
+		const filteredWhitelist = whitelist.filter(
+			(name) => availableTools.includes(name) && name !== "write" && name !== "edit",
+		);
+
+		return [...new Set([...DEFAULT_PLAN_TOOLS, ...filteredWhitelist])];
+	}
 
 	function updateStatus(ctx: ExtensionContext): void {
 		if (planModeEnabled) {
@@ -120,8 +138,8 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 
 	pi.on("before_agent_start", async (_event, ctx) => {
 		if (planModeEnabled) {
-			// Hide write/edit tools entirely from the agent
-			pi.setActiveTools(["read", "bash"]);
+			// Hide write/edit tools entirely from the agent (unless whitelisted, but we block write/edit in getActiveTools)
+			pi.setActiveTools(getActiveTools(ctx));
 		} else {
 			// Restore all tools
 			const allTools = pi.getAllTools().map((t) => t.name);
@@ -130,13 +148,15 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 
 		if (!planModeEnabled) return;
 
+		const activeTools = getActiveTools(ctx);
+		const toolList = activeTools.map((t) => `- ${t}`).join("\n");
+
 		const instructions = `[PLAN MODE ACTIVE]
 
 You are in plan mode. This is a PLANNING PHASE only.
 
 Available tools:
-- read: Read files to understand the codebase
-- bash: Run commands for exploration (safe commands allowed, others reviewed)
+${toolList}
 
 Note: write and edit tools are disabled in plan mode.
 
@@ -167,6 +187,12 @@ Help the user plan what needs to be done:
 
 	pi.on("tool_call", async (event, ctx) => {
 		if (!planModeEnabled) return;
+
+		const activeTools = getActiveTools(ctx);
+		if (activeTools.includes(event.toolName)) {
+			// If it's bash, we still want the safety checks
+			if (event.toolName !== "bash") return;
+		}
 
 		// Block write/edit tools
 		if (event.toolName === "write" || event.toolName === "edit") {
