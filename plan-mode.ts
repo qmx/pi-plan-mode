@@ -7,6 +7,9 @@
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { completeSimple } from "@mariozechner/pi-ai";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 export const SAFE_COMMAND_PATTERNS: RegExp[] = [
 	/^\s*cat\b/,
@@ -84,8 +87,32 @@ function getBashOverride(entries: any[], command: string): boolean {
 	return false;
 }
 
+const DEFAULT_PLAN_TOOLS = ["read", "bash"];
+
 export default function planModeExtension(pi: ExtensionAPI): void {
 	let planModeEnabled = false;
+
+	function loadToolWhitelist(): string[] {
+		try {
+			const settingsPath = join(homedir(), ".pi", "agent", "settings.json");
+			const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
+			const whitelist = settings["planMode.toolWhitelist"];
+			return Array.isArray(whitelist) ? whitelist : [];
+		} catch {
+			return [];
+		}
+	}
+
+	function getActiveTools(): string[] {
+		const whitelist = loadToolWhitelist();
+
+		// Filter whitelist: must not be 'write' or 'edit'
+		const filteredWhitelist = whitelist.filter(
+			(name) => name !== "write" && name !== "edit",
+		);
+
+		return [...new Set([...DEFAULT_PLAN_TOOLS, ...filteredWhitelist])];
+	}
 
 	function updateStatus(ctx: ExtensionContext): void {
 		if (planModeEnabled) {
@@ -120,8 +147,8 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 
 	pi.on("before_agent_start", async (_event, ctx) => {
 		if (planModeEnabled) {
-			// Hide write/edit tools entirely from the agent
-			pi.setActiveTools(["read", "bash"]);
+			// Hide write/edit tools entirely from the agent (unless whitelisted, but we block write/edit in getActiveTools)
+			pi.setActiveTools(getActiveTools());
 		} else {
 			// Restore all tools
 			const allTools = pi.getAllTools().map((t) => t.name);
@@ -130,13 +157,15 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 
 		if (!planModeEnabled) return;
 
+		const activeTools = getActiveTools();
+		const toolList = activeTools.map((t) => `- ${t}`).join("\n");
+
 		const instructions = `[PLAN MODE ACTIVE]
 
 You are in plan mode. This is a PLANNING PHASE only.
 
 Available tools:
-- read: Read files to understand the codebase
-- bash: Run commands for exploration (safe commands allowed, others reviewed)
+${toolList}
 
 Note: write and edit tools are disabled in plan mode.
 
@@ -168,11 +197,21 @@ Help the user plan what needs to be done:
 	pi.on("tool_call", async (event, ctx) => {
 		if (!planModeEnabled) return;
 
-		// Block write/edit tools
+		const activeTools = getActiveTools();
+
+		// Always block write/edit tools
 		if (event.toolName === "write" || event.toolName === "edit") {
 			return {
 				block: true,
 				reason: "Plan mode active. Use /plan to enable write/edit tools.",
+			};
+		}
+
+		// Block tools not in active tools list (which includes whitelist)
+		if (!activeTools.includes(event.toolName)) {
+			return {
+				block: true,
+				reason: `Tool '${event.toolName}' is not allowed in plan mode.`,
 			};
 		}
 
