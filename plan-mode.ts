@@ -5,8 +5,8 @@
  * Smart bash filtering with whitelist and AI review.
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { completeSimple } from "@mariozechner/pi-ai";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { completeSimple } from "@earendil-works/pi-ai";
 
 export const SAFE_COMMAND_PATTERNS: RegExp[] = [
 	/^\s*cat\b/,
