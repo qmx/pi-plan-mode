@@ -28,6 +28,7 @@ Plan mode extension for [pi](https://github.com/badlogic/pi): a toggleable read-
 
 In plan mode:
 - `write` and `edit` tools are blocked
+- Every other tool stays available, including MCP tools and tools registered by other extensions
 - Safe bash commands (ls, cat, grep, find, etc.) are allowed
 - Potentially mutating bash commands are reviewed by an AI model
 - Mutating git commands are blocked
