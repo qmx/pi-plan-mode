@@ -8,6 +8,9 @@
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { completeSimple } from "@mariozechner/pi-ai";
 
+/** The only tools plan mode hides. Every other tool stays available. */
+export const PLAN_MODE_BLOCKED_TOOLS: readonly string[] = ["write", "edit"];
+
 export const SAFE_COMMAND_PATTERNS: RegExp[] = [
 	/^\s*cat\b/,
 	/^\s*ls\b/,
@@ -86,6 +89,44 @@ function getBashOverride(entries: any[], command: string): boolean {
 
 export default function planModeExtension(pi: ExtensionAPI): void {
 	let planModeEnabled = false;
+	// Which blocked tools were active when plan mode was entered, so leaving
+	// plan mode restores that selection instead of forcing every registered
+	// tool back on.
+	let blockedToolsWereActive: Record<string, boolean> | undefined;
+
+	/**
+	 * Hide the blocked tools by removing them from the current selection.
+	 *
+	 * `pi.setActiveTools` replaces the whole selection, so it must never be used
+	 * to apply an allowlist here: that would drop read-only tools such as grep,
+	 * find, and MCP tools, and would discard the selection every other extension
+	 * maintains.
+	 */
+	function hideBlockedTools(): void {
+		const active = pi.getActiveTools();
+		blockedToolsWereActive ??= Object.fromEntries(
+			PLAN_MODE_BLOCKED_TOOLS.map((name) => [name, active.includes(name)]),
+		);
+		const next = active.filter((name) => !PLAN_MODE_BLOCKED_TOOLS.includes(name));
+		if (next.length !== active.length) pi.setActiveTools(next);
+	}
+
+	/**
+	 * Restore only the tools plan mode hid, leaving anything another extension
+	 * changed in the meantime untouched.
+	 */
+	function restoreBlockedTools(): void {
+		const active = pi.getActiveTools();
+		const next = [...active];
+		for (const name of PLAN_MODE_BLOCKED_TOOLS) {
+			// Default to restoring when the entry state is unknown, which happens
+			// when plan mode is restored from a previous session.
+			const wasActive = blockedToolsWereActive?.[name] ?? true;
+			if (wasActive && !next.includes(name)) next.push(name);
+		}
+		blockedToolsWereActive = undefined;
+		if (next.length !== active.length) pi.setActiveTools(next);
+	}
 
 	function updateStatus(ctx: ExtensionContext): void {
 		if (planModeEnabled) {
@@ -120,12 +161,13 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 
 	pi.on("before_agent_start", async (_event, ctx) => {
 		if (planModeEnabled) {
-			// Hide write/edit tools entirely from the agent
-			pi.setActiveTools(["read", "bash"]);
+			// Hide write/edit without replacing the whole selection.
+			hideBlockedTools();
 		} else {
-			// Restore all tools
-			const allTools = pi.getAllTools().map((t) => t.name);
-			pi.setActiveTools(allTools);
+			// Restore what plan mode hid. Never activate every registered tool
+			// here: extensions such as pi-mcp-adapter deliberately keep tools
+			// inactive to save context, and this hook runs after theirs.
+			restoreBlockedTools();
 		}
 
 		if (!planModeEnabled) return;
@@ -134,11 +176,11 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 
 You are in plan mode. This is a PLANNING PHASE only.
 
-Available tools:
-- read: Read files to understand the codebase
-- bash: Run commands for exploration (safe commands allowed, others reviewed)
+The write and edit tools are disabled in plan mode. Your other tools stay
+available, including read-only tools and tools provided by other extensions.
 
-Note: write and edit tools are disabled in plan mode.
+bash commands for exploration are allowed when safe. Commands that could mutate
+state are reviewed before they run, and mutating git commands are blocked.
 
 Help the user plan what needs to be done:
 - Explore the codebase
